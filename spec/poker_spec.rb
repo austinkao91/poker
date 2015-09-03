@@ -110,8 +110,11 @@ describe "Poker" do
         deck.draw(1)
         expect {deck.return_card(5)}.to raise_error "Not an array of cards!"
       end
+
     end
+
   end
+
 
   describe "Hand" do
     let(:hand) {Hand.new}
@@ -132,12 +135,17 @@ describe "Poker" do
         expect(hand.cards.count).to eq(5)
       end
     end
-    subject(:hand_cards) { Hand.new([1, 2, 3, 4, 5])}
-    let(:dummy_deck) { double("dummy_deck", return_cards: nil)}
+
     describe "#discard" do
+    subject(:hand_cards) { Hand.new([1, 2, 3, 4, 5])}
+    let(:dummy_deck) { double("dummy_deck", return_card: nil)}
       it "discards specified cards" do
-        hand_cards.discard([0,1], dummy_deck)
-        expect(hand_cards.cards).to eq([nil,nil,3,4,5])
+        test_hand.discard([0,1], dummy_deck)
+        expect(test_hand.cards).to eq([nil,nil,Card.new("diamonds", "5"),
+        Card.new("hearts", "7"),
+        Card.new("clubs", "J")])
+
+        expect(dummy_deck).to receive(:return_card)
       end
     end
 
@@ -194,17 +202,17 @@ describe "Poker" do
 
       it "false if not straight" do
         expect(single.is_straight?).to eq(false)
+        expect(quads.is_straight?).to eq(false)
       end
     end
-
     let(:single) {Hand.new([Card.new("diamonds", "10"),Card.new("spades", "5"),Card.new("diamonds", "6"),Card.new("hearts", "7"),Card.new("clubs", "J")])}
     let(:pair) {Hand.new([Card.new("diamonds", "10"), Card.new("spades", "5"), Card.new("diamonds", "5"), Card.new("hearts", "7"), Card.new("clubs", "J")])}
     let(:two_pair) {Hand.new([Card.new("diamonds", "10"), Card.new("spades", "5"), Card.new("diamonds", "5"), Card.new("hearts", "10"), Card.new("clubs", "J")])}
     let(:triples) {Hand.new([Card.new("diamonds", "10"), Card.new("spades", "5"), Card.new("diamonds", "5"), Card.new("hearts", "7"), Card.new("clubs", "5")])}
     let(:straight) {Hand.new([Card.new("diamonds", "10"), Card.new("spades", "J"), Card.new("diamonds", "Q"), Card.new("hearts", "K"), Card.new("clubs", "A")])}
     let(:flush) {Hand.new([Card.new("diamonds", "6"), Card.new("diamonds", "5"), Card.new("diamonds", "4"), Card.new("diamonds", "10"), Card.new("diamonds", "J")])}
-    let(:fullhouse) {Hand.new([Card.new("diamonds", "10"), Card.new("diamonds", "5"), Card.new("diamonds", "5"), Card.new("diamonds", "10"), Card.new("diamonds", "10")])}
-    let(:quads) {Hand.new([Card.new("diamonds", "10"), Card.new("diamonds", "10"), Card.new("diamonds", "10"), Card.new("diamonds", "10"), Card.new("diamonds", "J")])}
+    let(:fullhouse) {Hand.new([Card.new("diamonds", "10"), Card.new("spades", "5"), Card.new("diamonds", "5"), Card.new("diamonds", "10"), Card.new("diamonds", "10")])}
+    let(:quads) {Hand.new([Card.new("diamonds", "10"), Card.new("spades", "10"), Card.new("diamonds", "10"), Card.new("diamonds", "10"), Card.new("diamonds", "J")])}
     let(:royalstraight) {Hand.new([Card.new("diamonds", "A"), Card.new("diamonds", "K"), Card.new("diamonds", "Q"), Card.new("diamonds", "J"), Card.new("diamonds", "10")])}
 
     describe "#points" do
@@ -233,7 +241,7 @@ describe "Poker" do
       end
 
       it "scores full houses" do
-        expect(fullhouse.points).to eq(685)
+        expect(fullhouse.points).to eq(610)
       end
 
       it "scores quadruples" do
@@ -241,9 +249,59 @@ describe "Poker" do
       end
 
       it "scores royal straights" do
-        expect(royalstraight.points).to eq(1014)
+        expect(royalstraight.points).to eq(954)
       end
     end
 
   end
+
+  describe "Player" do
+    subject(:player) {Player.new}
+    let(:single) {Hand.new([Card.new("diamonds", "10"),Card.new("spades", "5"),Card.new("diamonds", "6"),Card.new("hearts", "7"),Card.new("clubs", "J")])}
+    let(:deck) { Deck.new }
+    describe "#initialize" do
+      it "reveal instance variable to hand" do
+        expect(player.instance_variable_get(:@hand)).to eq(player.hand)
+      end
+      it "initiates with an empty hand class" do
+        expect(player.hand.class).to eq(Hand)
+        expect(player.hand.count).to eq(0)
+      end
+
+      it "initiates with a hand" do
+        expect(Player.new(single).hand).to eq(single)
+      end
+
+    end
+
+
+    describe "#draw_hand" do
+    before do
+      player.draw_hand(deck)
+    end
+      it "draws until hand is full" do
+        expect(player.hand.count).to eq(5)
+      end
+
+      it "delegates to hand's draw method" do
+        expect(player.hand).to receive(:draw)
+      end
+    end
+
+    describe "#discard" do
+      let(:player_single) {Player.new(single)}
+
+      it "discard is delegated to the hand discard method" do
+        expect(single).to receive(:discard)
+        player_single.discard([0,1],deck)
+      end
+
+      it "discards cards from player hand" do
+        player_single.discard([0,1],deck)
+        expect(player_single.hand).to eq(Hand.new([nil,nil,Card.new("diamonds", "6"),Card.new("hearts", "7"),Card.new("clubs", "J")]))
+      end
+    end
+
+  end
+
 end
